@@ -3,14 +3,18 @@
 
 RS equ P1.3 
 EN equ P1.2 
-temp equ 02H  
+temp equ 02H
 
 org 0000h
-	LJMP START
+	LJMP MAIN
 
-org 0030h
-START:
-	mov temp, #99
+ORG 0040h              
+arrayTeclas:
+    DB 'X', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2', '1'
+
+org 0100h
+MAIN:
+	mov temp, #55
 	acall lcd_init
 	mov A, #02h
 	ACALL posicionaCursor 
@@ -38,9 +42,63 @@ START:
 	ACALL sendCharacter	
 	MOV A, #46H
 	ACALL posicionaCursor
-	ACALL displayTemperatura
+	acall aguardaInput
+	acall displayTemperatura
 	ACALL retornaCursor
 	JMP $
+
+aguardaInput:
+    MOV R0, #0        
+    CALL scanKeys     
+    JB F0, finish    
+
+    JMP aguardaInput        
+
+finish:
+    ret         
+
+scanKeys:
+    ; scan row0
+    SETB P0.3         
+    CLR P0.0          
+    CALL colScan      
+    JB F0, return     
+
+    ; scan row1
+    SETB P0.0         
+    CLR P0.1          
+    CALL colScan      
+    JB F0, return     
+
+    ; scan row2
+    SETB P0.1         
+    CLR P0.2          
+    CALL colScan      
+    JB F0, return     
+
+    ; scan row3
+    SETB P0.2         
+    CLR P0.3          
+    CALL colScan      
+    JB F0, return     
+
+    RET                
+
+return:
+    RET               
+
+colScan:
+    JNB P0.4, gotKey  
+    INC R0            
+    JNB P0.5, gotKey  
+    INC R0            
+    JNB P0.6, gotKey  
+    INC R0            
+    RET               
+
+gotKey:
+    SETB F0           
+    RET                
 
 displayTemperatura:
 	mov a, temp
@@ -50,14 +108,15 @@ displayTemperatura:
 	acall sendCharacter
 	mov a, b
 	add a, #30h
-	ACALL sendCharacter
+	ACALL sendCharacter 
 
-leituraAdc:
-	mov p1, #00h
-	mov a, ACC
-	mov P2, A
-	mov temp, P2
-	
+; LE O INPUT DO KEYPAD EM *R0*
+traduzTeclaPressionada:
+    MOV DPTR, #arrayTeclas  
+    MOV A, R0                
+    MOVC A, @A + DPTR        
+    MOV R1, A               
+    RET     
 
 lcd_init:
 
@@ -236,6 +295,6 @@ clearDisplay:
 	RET
 
 delay:
-	MOV R0, #50
-	DJNZ R0, $
+	MOV R1, #50
+	DJNZ R1, $
 	RET
