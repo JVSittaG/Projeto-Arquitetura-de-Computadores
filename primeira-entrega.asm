@@ -40,10 +40,22 @@ MAIN:
 	ACALL sendCharacter	 
 	MOV A, #'A'
 	ACALL sendCharacter	
-	MOV A, #46H
+	MOV A, #43H
 	ACALL posicionaCursor
 	acall aguardaInput
+	acall traduzTeclaPressionada
 	acall displayTemperatura
+	mov A, #'C'
+	acall sendCharacter
+	mov A, #47H
+	acall posicionaCursor
+	acall displayRps
+	MOV A, #'R'
+	ACALL sendCharacter	
+	MOV A, #'P'
+	ACALL sendCharacter	 
+	MOV A, #'S'
+	acall sendCharacter
 	ACALL retornaCursor
 	JMP $
 
@@ -55,6 +67,7 @@ aguardaInput:
     JMP aguardaInput        
 
 finish:
+	CLR F0
     ret         
 
 scanKeys:
@@ -101,22 +114,65 @@ gotKey:
     RET                
 
 displayTemperatura:
-	mov a, temp
-	mov b, #10
-	div ab
-	add a, #30h
+	mov a, r3
 	acall sendCharacter
-	mov a, b
-	add a, #30h
-	ACALL sendCharacter 
+	mov a, #30h
+	acall sendCharacter
+	;mov a, temp
+	;mov b, #10
+	;div ab
+	;add a, #30h
+	;acall sendCharacter
+	;mov a, b
+	;add a, #30h
+	;ACALL sendCharacter
+	ret 
+
+displayRps:
+	mov a, r5
+	acall sendCharacter
+	mov a, r6
+	acall sendCharacter
+	ret
+	
 
 ; LE O INPUT DO KEYPAD EM *R0*
 traduzTeclaPressionada:
     MOV DPTR, #arrayTeclas  
     MOV A, R0                
     MOVC A, @A + DPTR        
-    MOV R1, A               
-    RET     
+    MOV R3, A 
+
+	subb a, #30h
+	mov r4, a
+
+	acall rotacoesPorSegundo
+	acall hexaParaAscii
+             
+    RET
+
+rotacoesPorSegundo:
+	mov b, #05H
+	mul AB
+
+	add a, #05h
+	mov r4, a
+	ret
+
+hexaParaAscii:
+
+    MOV A, R4          ; Mova o valor de R4 para o acumulador A
+    MOV B, #10         ; Coloque 10 em B para divisão
+    DIV AB             ; Dividir A por B; A = quociente, B = resto
+                        ; A agora contém o dígito mais significativo (5)
+    ADD A, #30h        ; Converte 5 para ASCII ('5' = 35h)
+    MOV R5, A          ; Armazena o primeiro dígito ASCII em R5
+
+    ; Para obter o segundo dígito (0)
+	MOV A, B
+   	ADD A, #30H
+	MOV R6, A        ; Armazena o segundo dígito ASCII em R6
+    ret
 
 lcd_init:
 
@@ -218,7 +274,7 @@ sendCharacter:
 	RET
 
 ;Posiciona o cursor na linha e coluna desejada.
-;Escreva no Acumulador o valor de endere�o da linha e coluna.
+;Escreva no Acumulador o valor de endereï¿½o da linha e coluna.
 
 posicionaCursor:
 	CLR RS	         ; clear RS - indicates that instruction is being sent to module
@@ -249,7 +305,7 @@ posicionaCursor:
 	RET
 
 
-;Retorna o cursor para primeira posi��o sem limpar o display
+;Retorna o cursor para primeira posiï¿½ï¿½o sem limpar o display
 retornaCursor:
 	CLR RS	      ; clear RS - indicates that instruction is being sent to module
 	CLR P1.7		; |
