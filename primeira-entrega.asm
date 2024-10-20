@@ -57,7 +57,8 @@ MAIN:
 	MOV A, #'S'
 	acall sendCharacter
 	ACALL retornaCursor
-	JMP $
+	mov p1, #01111111b
+	JMP motor
 
 aguardaInput:
     MOV R0, #0        
@@ -176,181 +177,243 @@ hexaParaAscii:
 
 lcd_init:
 
-	CLR RS		; clear RS - indicates that instructions are being sent to the module
+	CLR RS		
+	CLR P1.7		
+	CLR P1.6		
+	SETB P1.5		
+	CLR P1.4		
 
-; function set	
-	CLR P1.7		; |
-	CLR P1.6		; |
-	SETB P1.5		; |
-	CLR P1.4		; | high nibble set
+	SETB EN		
+	CLR EN		
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	CALL delay			
+					
 
-	CALL delay		; wait for BF to clear	
-					; function set sent for first time - tells module to go into 4-bit mode
-; Why is function set high nibble sent twice? See 4-bit operation on pages 39 and 42 of HD44780.pdf.
+	SETB EN		
+	CLR EN		
+					
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
-					; same function set high nibble sent a second time
+	SETB P1.7		
 
-	SETB P1.7		; low nibble set (only P1.7 needed to be changed)
-
-	SETB EN		; |
-	CLR EN		; | negative edge on E
-				; function set low nibble sent
-	CALL delay		; wait for BF to clear
+	SETB EN		
+	CLR EN		 
+				
+	CALL delay		
 
 
-; entry mode set
-; set to increment with no shift
-	CLR P1.7		; |
-	CLR P1.6		; |
-	CLR P1.5		; |
-	CLR P1.4		; | high nibble set
+	CLR P1.7		
+	CLR P1.6		
+	CLR P1.5	
+	CLR P1.4		
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	SETB EN		
+	CLR EN		
 
-	SETB P1.6		; |
-	SETB P1.5		; |low nibble set
+	SETB P1.6		
+	SETB P1.5		
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	SETB EN		
+	CLR EN		
 
-	CALL delay		; wait for BF to clear
+	CALL delay		
 
 
-; display on/off control
-; the display is turned on, the cursor is turned on and blinking is turned on
-	CLR P1.7		; |
-	CLR P1.6		; |
-	CLR P1.5		; |
-	CLR P1.4		; | high nibble set
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	CLR P1.7		
+	CLR P1.6		
+	CLR P1.5		
+	CLR P1.4		
 
-	SETB P1.7		; |
-	SETB P1.6		; |
-	SETB P1.5		; |
-	SETB P1.4		; | low nibble set
+	SETB EN		
+	CLR EN		
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	SETB P1.7		
+	SETB P1.6		
+	SETB P1.5		
+	SETB P1.4		
 
-	CALL delay		; wait for BF to clear
+	SETB EN		
+	CLR EN		
+
+	CALL delay		
 	RET
 
 
 sendCharacter:
-	SETB RS  		; setb RS - indicates that data is being sent to module
-	MOV C, ACC.7		; |
-	MOV P1.7, C			; |
-	MOV C, ACC.6		; |
-	MOV P1.6, C			; |
-	MOV C, ACC.5		; |
-	MOV P1.5, C			; |
-	MOV C, ACC.4		; |
-	MOV P1.4, C			; | high nibble set
+	SETB RS  		
+	MOV C, ACC.7		
+	MOV P1.7, C			
+	MOV C, ACC.6		
+	MOV P1.6, C			
+	MOV C, ACC.5		
+	MOV P1.5, C			
+	MOV C, ACC.4		
+	MOV P1.4, C			
 
-	SETB EN			; |
-	CLR EN			; | negative edge on E
+	SETB EN			
+	CLR EN			
 
-	MOV C, ACC.3		; |
-	MOV P1.7, C			; |
-	MOV C, ACC.2		; |
-	MOV P1.6, C			; |
-	MOV C, ACC.1		; |
-	MOV P1.5, C			; |
-	MOV C, ACC.0		; |
-	MOV P1.4, C			; | low nibble set
+	MOV C, ACC.3		
+	MOV P1.7, C			
+	MOV C, ACC.2		
+	MOV P1.6, C			
+	MOV C, ACC.1		
+	MOV P1.5, C			
+	MOV C, ACC.0		
+	MOV P1.4, C			
 
-	SETB EN			; |
-	CLR EN			; | negative edge on E
+	SETB EN			
+	CLR EN			
 
-	CALL delay			; wait for BF to clear
+	CALL delay			
 	RET
 
 ;Posiciona o cursor na linha e coluna desejada.
 ;Escreva no Acumulador o valor de endereï¿½o da linha e coluna.
 
 posicionaCursor:
-	CLR RS	         ; clear RS - indicates that instruction is being sent to module
-	SETB P1.7		    ; |
-	MOV C, ACC.6		; |
-	MOV P1.6, C			; |
-	MOV C, ACC.5		; |
-	MOV P1.5, C			; |
-	MOV C, ACC.4		; |
-	MOV P1.4, C			; | high nibble set
+	CLR RS	         
+	SETB P1.7		    
+	MOV C, ACC.6		
+	MOV P1.6, C			
+	MOV C, ACC.5		
+	MOV P1.5, C			
+	MOV C, ACC.4		
+	MOV P1.4, C			
 
-	SETB EN			; |
-	CLR EN			; | negative edge on E
+	SETB EN			
+	CLR EN			
 
-	MOV C, ACC.3		; |
-	MOV P1.7, C			; |
-	MOV C, ACC.2		; |
-	MOV P1.6, C			; |
-	MOV C, ACC.1		; |
-	MOV P1.5, C			; |
-	MOV C, ACC.0		; |
-	MOV P1.4, C			; | low nibble set
+	MOV C, ACC.3		
+	MOV P1.7, C			
+	MOV C, ACC.2		
+	MOV P1.6, C			
+	MOV C, ACC.1		
+	MOV P1.5, C			
+	MOV C, ACC.0		
+	MOV P1.4, C			
 
-	SETB EN			; |
-	CLR EN			; | negative edge on E
+	SETB EN			
+	CLR EN			
 
-	CALL delay			; wait for BF to clear
+	CALL delay			
 	RET
 
 
 ;Retorna o cursor para primeira posiï¿½ï¿½o sem limpar o display
 retornaCursor:
-	CLR RS	      ; clear RS - indicates that instruction is being sent to module
-	CLR P1.7		; |
-	CLR P1.6		; |
-	CLR P1.5		; |
-	CLR P1.4		; | high nibble set
+	CLR RS	      
+	CLR P1.7		
+	CLR P1.6		
+	CLR P1.5		
+	CLR P1.4		
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	SETB EN		
+	CLR EN		
 
-	CLR P1.7		; |
-	CLR P1.6		; |
-	SETB P1.5		; |
-	SETB P1.4		; | low nibble set
+	CLR P1.7		
+	CLR P1.6		
+	SETB P1.5		
+	SETB P1.4		
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	SETB EN		
+	CLR EN		
 
-	CALL delay		; wait for BF to clear
+	CALL delay		
 	RET
 
 
 ;Limpa o display
 clearDisplay:
-	CLR RS	      ; clear RS - indicates that instruction is being sent to module
-	CLR P1.7		; |
-	CLR P1.6		; |
-	CLR P1.5		; |
-	CLR P1.4		; | high nibble set
+	CLR RS	      
+	CLR P1.7		
+	CLR P1.6		
+	CLR P1.5		
+	CLR P1.4		
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	SETB EN		
+	CLR EN		
 
-	CLR P1.7		; |
-	CLR P1.6		; |
-	CLR P1.5		; |
-	SETB P1.4		; | low nibble set
+	CLR P1.7		
+	CLR P1.6		
+	CLR P1.5		
+	SETB P1.4		
 
-	SETB EN		; |
-	CLR EN		; | negative edge on E
+	SETB EN		
+	CLR EN		
 
-	CALL delay		; wait for BF to clear
+	CALL delay		
 	RET
 
 delay:
 	MOV R1, #50
 	DJNZ R1, $
 	RET
+
+; ----------------
+
+motor:
+MOV TMOD, #50H   
+SETB TR1   
+
+ 
+ MOV DPL, #LOW(LEDcodes)   
+     
+ 
+ MOV DPH, #HIGH(LEDcodes) 
+ 
+ CLR P3.4   
+ CLR P3.3   
+
+again: 
+ CALL setDirection  
+ MOV A, TL1   
+ CJNE A, #10, skip  
+ CALL clearTimer   
+skip: 
+ MOVC A, @A+DPTR   
+
+ 
+ MOV C, F0   
+ MOV ACC.7, C    
+
+ 
+ MOV P1, A   
+ 
+ JMP again   
+ 
+setDirection: 
+ PUSH ACC   
+ PUSH 20H   
+ CLR A    
+ MOV 20H, #0   
+ MOV C, P2.0    
+ MOV ACC.0, C    
+ MOV C, F0   
+ MOV 0, C   
+ 
+ CJNE A, 20H, changeDir 
+ 
+ JMP finish2   
+changeDir: 
+ CLR P3.0   
+ CLR P3.1  
+CALL clearTimer  
+MOV C, P2.0   
+MOV F0, C   
+MOV P3.0, C   
+CPL C    
+MOV P3.1, C   
+finish2: 
+POP 20H    
+POP ACC    
+RET    
+clearTimer: 
+CLR A    
+CLR TR1    
+MOV TL1, #0   
+SETB TR1   
+RET    
+LEDcodes: 
+
+DB 11000000B, 11111001B, 10100100B, 10110000B, 10011001B, 10010010B, 10000010B, 11111000B, 10000000B, 10010000B
