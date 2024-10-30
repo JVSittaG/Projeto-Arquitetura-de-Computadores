@@ -57,8 +57,9 @@ MAIN:
 	MOV A, #'S'
 	acall sendCharacter
 	ACALL retornaCursor
-	mov p1, #01111111b
-	JMP motor
+	acall asciiParaDecimal
+	ajmp motor
+	JMP $
 
 aguardaInput:
     MOV R0, #0        
@@ -152,7 +153,12 @@ traduzTeclaPressionada:
              
     RET
 
-rotacoesPorSegundo:
+; a FAN tem velocidade maxima de 3000RPM
+; (50 RPS)
+; com base na temperatura maxima sendo 90c e 50 RPS,
+; temos que a formula input * 5 + 5 = rps 
+; ou seja, o minimo de rotacoes por segundo sendo 5, o maximo 50 baseados no input
+rotacoesPorSegundo: 
 	mov b, #05H
 	mul AB
 
@@ -161,19 +167,37 @@ rotacoesPorSegundo:
 	ret
 
 hexaParaAscii:
-
-    MOV A, R4          ; Mova o valor de R4 para o acumulador A
-    MOV B, #10         ; Coloque 10 em B para divisão
-    DIV AB             ; Dividir A por B; A = quociente, B = resto
-                        ; A agora contém o dígito mais significativo (5)
-    ADD A, #30h        ; Converte 5 para ASCII ('5' = 35h)
-    MOV R5, A          ; Armazena o primeiro dígito ASCII em R5
-
-    ; Para obter o segundo dígito (0)
+	;primeiro digito (menos significativo, unidades)
+    MOV A, R4          
+    MOV B, #10         
+    DIV AB             
+                        
+    ADD A, #30h        
+    MOV R5, A          
+	
+	;segundo digito (mais significativo, dezenas) utilizando o resto
 	MOV A, B
    	ADD A, #30H
-	MOV R6, A        ; Armazena o segundo dígito ASCII em R6
+	MOV R6, A    
     ret
+
+; como estamos lidando com digitos naturais (0 - 9), basta subtrair 30 para obtermos o decimal, sao iguais.
+asciiParaDecimal:
+    MOV A, R6      
+    CLR C           
+    SUBB A, #30H    
+    MOV R2, A       
+
+    MOV A, R5       
+    CLR C           
+    SUBB A, #30H    
+    MOV B, #0AH     
+    MUL AB          
+    
+    ADD A, R2    
+    MOV R1, A
+	RET
+	
 
 lcd_init:
 
@@ -268,8 +292,6 @@ sendCharacter:
 	CALL delay			
 	RET
 
-;Posiciona o cursor na linha e coluna desejada.
-;Escreva no Acumulador o valor de endereï¿½o da linha e coluna.
 
 posicionaCursor:
 	CLR RS	         
@@ -353,67 +375,23 @@ delay:
 ; ----------------
 
 motor:
-MOV TMOD, #50H   
-SETB TR1   
+	MOV TMOD, #50H    
+    MOV TL1, #0       
+    MOV R7, #0        
+    SETB TR1          
 
- 
- MOV DPL, #LOW(LEDcodes)   
-     
- 
- MOV DPH, #HIGH(LEDcodes) 
- 
- CLR P3.4   
- CLR P3.3   
+    SETB P3.0         
+    CLR P3.1          
 
-again: 
- CALL setDirection  
- MOV A, TL1   
- CJNE A, #10, skip  
- CALL clearTimer   
-skip: 
- MOVC A, @A+DPTR   
+loop_motor:
+	MOV A, TL1        
+    MOV R7, A         ; guarda contador no R7 pra facilitar visualizacao
+	
+	mov 60h, r1  
+    CJNE A, 60H, loop_motor ; compara valor decimal do r1 do numero maximo de RPS com o atual numero de rotacoes
+    jmp PARAR_MOTOR
 
- 
- MOV C, F0   
- MOV ACC.7, C    
-
- 
- MOV P1, A   
- 
- JMP again   
- 
-setDirection: 
- PUSH ACC   
- PUSH 20H   
- CLR A    
- MOV 20H, #0   
- MOV C, P2.0    
- MOV ACC.0, C    
- MOV C, F0   
- MOV 0, C   
- 
- CJNE A, 20H, changeDir 
- 
- JMP finish2   
-changeDir: 
- CLR P3.0   
- CLR P3.1  
-CALL clearTimer  
-MOV C, P2.0   
-MOV F0, C   
-MOV P3.0, C   
-CPL C    
-MOV P3.1, C   
-finish2: 
-POP 20H    
-POP ACC    
-RET    
-clearTimer: 
-CLR A    
-CLR TR1    
-MOV TL1, #0   
-SETB TR1   
-RET    
-LEDcodes: 
-
-DB 11000000B, 11111001B, 10100100B, 10110000B, 10011001B, 10010010B, 10000010B, 11111000B, 10000000B, 10010000B
+PARAR_MOTOR:
+    CLR P3.0
+    CLR P3.1
+	JMP $
