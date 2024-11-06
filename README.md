@@ -1,13 +1,23 @@
-# Projeto controladora de FAN
+# Relatório Final
 
-- Este programa faz parte de um projeto de Arquitetura de Computadores e simula uma controladora de fan no ambiente Edsim51 sendo totalmente escrito em Assembly 8051.
+Nome: Willian Verenka
+RA: 22.124.081-5
+Nome: João Vitor Sitta Giopatto
+RA: 22.123.054-3
+
+
+# Introdução
+
+Este relatório apresenta o desenvolvimento e os resultados do projeto realizado para a disciplina CE4411. Este programa faz parte de um projeto de Arquitetura de Computadores e simula uma controladora de fan no ambiente Edsim51, sendo totalmente escrito em Assembly 8051.
+
 
 # Controlador de Ventilador com Interface LCD
 
 ## Descrição
-Este projeto implementa um sistema de controle de ventilador baseado em temperatura utilizando Assembly para o microcontrolador 8051. O sistema permite que o usuário insira uma temperatura através de um teclado numérico e, com base nesse valor, controla automaticamente as rotações de uma FAN. A interface com o usuário é feita através de um display LCD.
+Este projeto implementa uma simulação de um sistema de controle de ventilador baseado em temperatura, utilizando Assembly para o microcontrolador 8051. O programa permite que o usuário digite a temperatura desejada da CPU e, com base em uma equação que leva esse fator em conta, define uma taxa de rotações por segundo para a fan da CPU rodar, controlando assim a temperatura da CPU. Após a definição da RPS da fan, um motor é utilizado para simular como seria a atuação dessa fan com a velocidade calculada. Também é possível acompanhar o contador de quantidade de rotações feitas pelo motor no EDSIM51, tanto no acumulador quanto no R7, enquanto o motor está rodando. A interface com o usuário é feita através de um display LCD, onde o usuário receberá uma mensagem para digitar o valor da temperatura e, após a digitação, o valor da RPS da fan.
 
 ## Funcionalidades Principais
+
 - Interface com teclado numérico para entrada de temperatura
 - Display LCD para visualização de dados
 - Controle proporcional da velocidade do ventilador
@@ -87,7 +97,14 @@ PARAR_MOTOR:
     CLR P3.1
 	JMP $
 ```
- 
+
+
+
+ # Conclusão
+
+Inicialmente, nossa ideia e plano para o projeto eram conseguir controlar, com o input do usuário no programa, a temperatura de uma CPU, alterando a quantidade de rotações por segundo de sua fan. Porém, tivemos dificuldades em realmente implementar essa funcionalidade. Portanto, resolvemos trabalhar com uma ideia de simulação de como seria esse processo. Outra dificuldade que encontramos foi a utilização do teclado numérico para obter dois números do usuário (um para a dezena e outro para a unidade) a fim de regular a velocidade da fan. Para contornar essa situação, resolvemos utilizar apenas um input do usuário para o programa, representando a dezena da temperatura da CPU. Uma possível melhoria seria tornar essa simulação mais complexa, considerando mais aspectos do hardware do computador, como, por exemplo, a inicialização do programa com a fan em velocidade máxima para simular o comportamento ao ligar o computador, entre outras possibilidades.
+
+
 
 
 
