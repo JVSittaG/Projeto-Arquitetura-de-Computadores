@@ -18,11 +18,42 @@ Este projeto implementa uma simulação de um sistema de controle de ventilador 
 
 ## Funcionalidades Principais
 
+- Inicialização segura com a FAN em maxima performance
 - Interface com teclado numérico para entrada de temperatura
 - Display LCD para visualização de dados
 - Controle proporcional da velocidade do ventilador
 - Medição de rotações por segundo (RPS)
 - Display de temperatura e velocidade de rotação
+
+## Funcionamento
+
+- Ao iniciar o programa, a controladora assume o modo de seguranca e performa em sua capacidade máxima.
+![Animação](https://github.com/user-attachments/assets/60ef01d5-6d6d-4e3e-92a0-80a970ddb6ab)
+
+- Após a inicialização, o usuário pode entrar com um input para simular o sensor de temperatura da CPU.
+
+- O programa calculará a velocidade adequada da FAN de forma proporcional à temperatura inserida.
+
+![2](https://github.com/user-attachments/assets/b607be80-ab3f-4b06-8d82-48c04d8c2243)
+
+
+| Temperatura (°C) | RPS (Rotatações por segundo) | RPM (Rotações por minuto) |
+| ------------- |:-------------:| -----:|
+| 0°C | 05 RPS | 300 RPM |
+| 10°C | 10 RPS | 600 RPM |
+| 20°C | 15 RPS | 900 RPM |
+| 30°C | 20 RPS | 1200 RPM |
+| 40°C | 25 RPS | 1500 RPM |
+| 50°C | 30 RPS | 1800 RPM |
+| 60°C | 35 RPS | 2100 RPM |
+| 70°C | 40 RPS | 2400 RPM |
+| 80°C | 45 RPS | 2700 RPM |
+| 90°C | 50 RPS | 3000 RPM |
+
+- Quando o sistema é inicializado ou uma temperatura é escolhida, é possível observar o que seria o comportamento da fan no intervalo de um segundo no motor do edsim51.
+- O motor completará o número de voltas correspondente ao RPS.
+
+![3](https://github.com/user-attachments/assets/2d216612-3e72-4677-a30e-3c29fac1153a)
 
 ## Detalhes Técnicos Importantes
 
@@ -52,19 +83,20 @@ rotacoesPorSegundo:
 Após ser calculado o número de rotações, nós pegamos os valores dos digitos ascii e transformamos em decimal. É uma operação mais conveniente que uma conversão de hexa para decimal, já que como estamos tratando de digitos naturais (0-9 para dezena e 0-9 para unidade), basta subtrair 30 em hexadecimal e temos o numero de rotações armazenados para que possamos utilizar no controle do motor.
 
 ```assembly
+; como estamos lidando com digitos naturais (0 - 9), basta subtrair 30 para obtermos o decimal, sao iguais.
 asciiParaDecimal:
     MOV A, R6      
-    CLR C           
+    CLR C           ; limpa o carry para nao atrapalhar a subtracao
     SUBB A, #30H    
-    MOV R2, A       
+    MOV R2, A       ; armazena o valor do digito menos significativo
 
     MOV A, R5       
-    CLR C           
+    CLR C           ; limpa o carry para nao atrapalhar a subtracao
     SUBB A, #30H    
     MOV B, #0AH     
-    MUL AB          
+    MUL AB          ; multiplica o digito mais significativo (dezena) por 10
     
-    ADD A, R2    
+    ADD A, R2    ; soma os valores calculados
     MOV R1, A
 	RET
 ````
@@ -75,27 +107,36 @@ asciiParaDecimal:
 O motor funciona em apenas um sentido e ele é interrompido assim que completa N voltas, sendo N o número de rotações por segundo calculado previamente. Portanto, seria uma simulação que demonstraria o comportamento da FAN em um intervalo de um segundo em dada temperatura. Após completar todas as voltas, o motor é interrompido. OBS: recomenda-se que, ao entrar com a temperatura, reduza a update frequency para um valor entre 1 e 10 para que se possa enxergar as voltas do motor de forma adequada. É possível acompanhar esse contador pelo EDSIM51 tanto no acumulador como no R7 no momento em que o motor está rodando.
 
 ```assembly
+; sensor do motor e conectado por padrao no pino p3.5 (timer)
+; a cada rotacao completa do motor, um pulso e gerado no pino 
+; o timer no modo de contagem aumenta em 1 a cada pulso detectado
 motor:
-	MOV TMOD, #50H    
-    MOV TL1, #0       
-    MOV R7, #0        
+	MOV TMOD, #50H    ; inicializa timer de 16 bits
+    MOV TL1, #0       ; seta o contador pra 0
+    MOV R7, #0        ; limpa o registrador auxiliar para debugar e visualizar as contagens de rotacoes
     SETB TR1          
 
-    SETB P3.0         
-    CLR P3.1          
+    SETB P3.0         ; inicia o motor no sentido horario
+    CLR P3.1
+	acall loop_motor
+	ret
+	          
 
 loop_motor:
 	MOV A, TL1        
     MOV R7, A         ; guarda contador no R7 pra facilitar visualizacao
 	
+	; fluxo para interromper o fluxo do motor apos atingir o numero desejado de retacoes
 	mov 60h, r1  
-    CJNE A, 60H, loop_motor ; compara valor do r1 do numero maximo de RPS com o atual numero de rotacoes
-    jmp PARAR_MOTOR
+    CJNE A, 60H, loop_motor ; compara valor decimal do r1 do numero maximo de RPS com o atual numero de rotacoes
+    acall PARAR_MOTOR
+    ret
 
+; limpa os bits que sao setados na inicializacao do motor
 PARAR_MOTOR:
     CLR P3.0
     CLR P3.1
-	JMP $
+	ret
 ```
 
 
