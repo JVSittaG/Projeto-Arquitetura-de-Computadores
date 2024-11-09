@@ -1,6 +1,3 @@
-; USAR TECLADO PRA TEMPERATURA
-; USAR CONTADOR PARA NUMERO DE VOLTAS EM VEZ DE VELOCIDADE
-
 RS equ P1.3 
 EN equ P1.2 
 temp equ 02H
@@ -16,6 +13,15 @@ org 0100h
 MAIN:
 	mov temp, #55
 	acall lcd_init
+    mov A, #47H
+	acall posicionaCursor
+    acall displayRps
+	MOV A, #'R'
+	ACALL sendCharacter	
+	MOV A, #'P'
+	ACALL sendCharacter	 
+	MOV A, #'S'
+	ACALL sendCharacter
 	mov A, #02h
 	ACALL posicionaCursor 
 	MOV A, #'T'
@@ -42,6 +48,8 @@ MAIN:
 	ACALL sendCharacter	
 	MOV A, #43H
 	ACALL posicionaCursor
+	mov r1, #32h
+	acall motor
 	acall aguardaInput
 	acall traduzTeclaPressionada
 	acall displayTemperatura
@@ -58,9 +66,11 @@ MAIN:
 	acall sendCharacter
 	ACALL retornaCursor
 	acall asciiParaDecimal
-	ajmp motor
+	acall motor
 	JMP $
 
+; loop infinito enquanto o input da matriz do teclado nao e encontrado
+; caso seja, bit F0 e setado, limpo e retorna a stack pro fluxo principal
 aguardaInput:
     MOV R0, #0        
     CALL scanKeys     
@@ -116,7 +126,7 @@ gotKey:
     RET                
 
 displayTemperatura:
-	mov a, r3
+	mov a, r3 ; envia o digito da dezena para ser mostrado
 	acall sendCharacter
 	mov a, #30h
 	acall sendCharacter
@@ -140,11 +150,15 @@ displayRps:
 
 ; LE O INPUT DO KEYPAD EM *R0*
 traduzTeclaPressionada:
+	; array teclas funciona como uma lookup table,
+	; o valor do input da matriz eh previamente registrado em r0
+	; percorre ate o index desse input e seleciona o char correspondente
     MOV DPTR, #arrayTeclas  
     MOV A, R0                
     MOVC A, @A + DPTR        
     MOV R3, A 
 
+	clr c
 	subb a, #30h
 	mov r4, a
 
@@ -184,17 +198,17 @@ hexaParaAscii:
 ; como estamos lidando com digitos naturais (0 - 9), basta subtrair 30 para obtermos o decimal, sao iguais.
 asciiParaDecimal:
     MOV A, R6      
-    CLR C           
+    CLR C           ; limpa o carry para nao atrapalhar a subtracao
     SUBB A, #30H    
-    MOV R2, A       
+    MOV R2, A       ; armazena o valor do digito menos significativo
 
     MOV A, R5       
-    CLR C           
+    CLR C           ; limpa o carry para nao atrapalhar a subtracao
     SUBB A, #30H    
     MOV B, #0AH     
-    MUL AB          
+    MUL AB          ; multiplica o digito mais significativo (dezena) por 10
     
-    ADD A, R2    
+    ADD A, R2    ; soma os valores calculados
     MOV R1, A
 	RET
 	
@@ -374,24 +388,33 @@ delay:
 
 ; ----------------
 
+; sensor do motor e conectado por padrao no pino p3.5 (timer)
+; a cada rotacao completa do motor, um pulso e gerado no pino 
+; o timer no modo de contagem aumenta em 1 a cada pulso detectado
 motor:
-	MOV TMOD, #50H    
-    MOV TL1, #0       
-    MOV R7, #0        
+	MOV TMOD, #50H    ; inicializa timer de 16 bits
+    MOV TL1, #0       ; seta o contador pra 0
+    MOV R7, #0        ; limpa o registrador auxiliar para debugar e visualizar as contagens de rotacoes
     SETB TR1          
 
-    SETB P3.0         
-    CLR P3.1          
+    SETB P3.0         ; inicia o motor no sentido horario
+    CLR P3.1
+	acall loop_motor
+	ret
+	          
 
 loop_motor:
 	MOV A, TL1        
     MOV R7, A         ; guarda contador no R7 pra facilitar visualizacao
 	
+	; fluxo para interromper o fluxo do motor apos atingir o numero desejado de retacoes
 	mov 60h, r1  
     CJNE A, 60H, loop_motor ; compara valor decimal do r1 do numero maximo de RPS com o atual numero de rotacoes
-    jmp PARAR_MOTOR
+    acall PARAR_MOTOR
+    ret
 
+; limpa os bits que sao setados na inicializacao do motor
 PARAR_MOTOR:
     CLR P3.0
     CLR P3.1
-	JMP $
+	ret
